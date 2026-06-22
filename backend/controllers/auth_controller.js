@@ -1,12 +1,110 @@
+import User from "../models/user_model.js"
+import { generateTokenAndSetCookie } from "../lib/utils/generate_token.js";
+import bcrypt  from "bcryptjs";
 const signUp = async (req, res) => {
-  res.json({ data: "you are hititng the signup endpoint" });
+  try {
+    const {username,email,fullName,password}=req.body;
+
+    const emailRegex=/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
+    if(!emailRegex.test(email)){
+      return res.status(400).json({success:false,message:"invalid email input"})
+    }
+
+    const existingUsername=await User.findOne({username})
+    if(existingUsername){
+      return res.status(400).json({success:false,message:"username is already taken"})
+    }
+
+    const existingEmail=await User.findOne({email})
+    if(existingEmail){
+      return res.status(400).json({success:false,message:"Email is already used for sign up"})
+    }
+
+    if(password.length<5 || password.length>25){
+      return res.status(400).json({success:false,message:"the password should be atleast 6 chars long or under 25 chars"})
+    }
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword=await bcrypt.hash(password,salt);
+    const newUser=new User({
+      fullName,
+      email,
+      username,
+      password:hashedPassword
+    })
+    if(newUser){
+      await newUser.save();
+      generateTokenAndSetCookie(newUser._id,res)
+
+      res.status(201).json({success:true,message:"new user was created",
+
+        _id:newUser._id,
+        email:newUser.email,
+        fullName:newUser.fullName,
+        username:newUser.username,
+        followers:newUser.followers,
+        following:newUser.following,
+        profileImg:newUser.profileImg,
+        coverImg:newUser.coverImg
+      })
+    }else{
+      res.status(400).json({})
+    }
+  } catch (error) {
+    res.status(500).json({success:false,message:"internal server error"})
+    console.log(error);
+  }
 };
 const logIn = async (req, res) => {
-  res.json({ data: "you are hititng the login endpoint" });
+  try {
+    const {username,password}=req.body;
+    const user=await User.findOne({$or:[{username:username},{email:username}]});
+
+    if(!user){
+      return res.status(404).json({message:"user not found"})
+    }
+
+    const isPasswordCorrect=await bcrypt.compare(password,user.password || "")
+    if(!isPasswordCorrect){
+      return res.status(404).json({message:"password is incorrect try again"})
+    }
+
+    generateTokenAndSetCookie(user._id,res)
+
+    res.status(200).json({success:true,message:"logged in",
+      _id:user._id,
+      username:user.username,
+      email:user.email,
+      followers:user.followers,
+      following:user.following,
+      coverImg:user.coverImg,
+      profileImg:user.profileImg
+    })
+  } catch (error) {
+    res.status(500).json({success:false,message:"internal server error"})
+    console.log(error);
+  }
 };
 const logOut = async (req, res) => {
-  res.json({ data: "you are hititng the logout endpoint" });
+  try {
+    res.cookie("jwt","",{
+      maxAge:0
+    });
+    res.status(200).json({message:"logged out"})
+  } catch (error) {
+    res.status(500).json({message:"internal server error"});
+    console.log(`the error in logout is ${error}`);
+  }
 };
 
 
-export {signUp,logIn, logOut}
+const getMe=async (req,res)=>{
+  try {
+    const user=req.user
+    return res.status(200).json({message:"success", user})
+  } catch (error) {
+    res.status(500).json({message:"internal server error"});
+    console.log(`the error in getting the user data is ${error}`);
+  }
+}
+
+export {signUp,logIn, logOut,getMe}
