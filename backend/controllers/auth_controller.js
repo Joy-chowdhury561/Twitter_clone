@@ -21,7 +21,7 @@ const signUp = async (req, res) => {
     }
 
     if(password.length<5 || password.length>25){
-      return res.status(400).json({success:false,message:"the password should be atleast 6 chars long or under 25 chars"})
+      return res.status(400).json({success:false,message:"the password should be at least 6 chars long or under 25 chars"})
     }
     const salt = await bcrypt.genSalt(10);
     const hashedPassword=await bcrypt.hash(password,salt);

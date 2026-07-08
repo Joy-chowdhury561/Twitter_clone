@@ -5,7 +5,7 @@ import mongoose from "mongoose";
        const conn=await mongoose.connect(process.env.MONGO_URI)
        console.log(`the database was connected succesfully`);
     } catch (error) {
-        console.log(`there was a error while connecting. the error is : ${error.message}`);
+        console.log(`there was a error while connecting to mongodb. the error is : ${error.message}`);
         process.exit(1)
     }
 }
