@@ -77,7 +77,7 @@ export const getSuggestedUser = async (req, res) => {
       },
     ]);
     const filteredUsers = users.filter(
-      (user) => !usersFollowedByMe.following.includes(user._id),
+      (user) => !usersFollowedByMe.following.includes(req.user._id),
     );
     const suggestedUsers = filteredUsers.slice(0, 5);
     suggestedUsers.forEach((user) => (user.password = null));
