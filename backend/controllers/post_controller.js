@@ -309,6 +309,7 @@ export const getUserPosts = async (req, res) => {
     return res.status(500).json({ message: "internal server error" });
   }
 };
+
 export const getMyPosts = async (req, res) => {
   try {
     const userId = req.user._id;
