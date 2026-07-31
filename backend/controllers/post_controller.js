@@ -175,12 +175,15 @@ export const likeUnlikePost = async (req, res) => {
         { $push: { likes: userId } },
         { new: true },
       );
-      const newNotification = new Notification({
-        from: userId,
-        to: post.user,
-        type: "like",
-      });
-      await newNotification.save();
+      if (post.user.toString() !== req.user._id.toString()) {
+        const newNotification = new Notification({
+          from: userId,
+          to: post.user,
+          type: "like",
+        });
+        await newNotification.save();
+      }
+
       await User.findByIdAndUpdate(req.user._id, {
         $push: { likedPosts: req.params.id },
       });
@@ -291,11 +294,11 @@ export const getFollowingPosts = async (req, res) => {
 export const getUserPosts = async (req, res) => {
   try {
     const username = req.params.username;
-    const user=await User.findOne({username})
-    if(!user){
-      return res.status(404).json({message:"user not found"})
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(404).json({ message: "user not found" });
     }
-    const myPosts = await Post.find({ user:user._id })
+    const myPosts = await Post.find({ user: user._id })
       .sort({
         createdAt: -1,
       })
@@ -318,7 +321,7 @@ export const getMyPosts = async (req, res) => {
         createdAt: -1,
       })
       .populate({
-        path: "comments.user",
+        path: "user comments.user",
         select: "-password",
       });
     return res.status(200).json(myPosts);
