@@ -90,7 +90,7 @@ const logIn = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ message: "user not found" });
+      return res.status(404).json({ message: "Invalid credentials!" });
     }
 
     const isPasswordCorrect = await bcrypt.compare(
@@ -100,7 +100,7 @@ const logIn = async (req, res) => {
     if (!isPasswordCorrect) {
       return res
         .status(404)
-        .json({ message: "password is incorrect try again" });
+        .json({ message: "invalid credentials!" });
     }
 
     generateTokenAndSetCookie(user._id, res);
@@ -138,7 +138,7 @@ const logOut = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const user = req.user;
-    return res.status(200).json({ message: "success", user });
+    return res.status(200).json({ message: "success in getting the user", user });
   } catch (error) {
     res.status(500).json({ message: "internal server error" });
     console.log(`the error in getting the user data is ${error}`);

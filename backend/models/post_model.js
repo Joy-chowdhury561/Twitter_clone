@@ -8,8 +8,7 @@ const postSchema = new mongoose.Schema(
       required: true,
     },
     text: {
-      type: String,
-      required:true
+      type: String
     },
     img: {
       type: String,
@@ -31,6 +30,10 @@ const postSchema = new mongoose.Schema(
           ref: "User",
           required: true,
         },
+        createdAt:{
+          type:Date,
+          default:Date.now
+        }
       },
     ],
   },

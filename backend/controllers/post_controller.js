@@ -25,12 +25,24 @@ export const createPost = async (req, res) => {
       text,
       img,
     });
+    await newPost.populate([
+      {
+        path: "user",
+        select: "-password",
+      },
+      {
+        path: "comments.user",
+        select: "-password",
+      },
+    ]);
 
     if (newPost) {
       await newPost.save();
-      return res
-        .status(201)
-        .json({ success: true, message: "the post was created" });
+      return res.status(201).json({
+        success: true,
+        message: "the post was created",
+        post: newPost,
+      });
     }
   } catch (error) {
     console.log("the error in creating post is", error);
@@ -85,16 +97,23 @@ export const commentOnPost = async (req, res) => {
 
     await post.save();
 
-    const postOwner = post.user;
-
-    const newNotification = new Notification({
-      type: "comment",
-      from: req.user._id,
-      to: postOwner,
+    await post.populate({
+      path: "comments.user",
+      select: "-password",
     });
-    await newNotification.save();
-
-    return res.status(200).json({ message: "your comment was posted" });
+    const postOwner = post.user;
+    if (user._id.toString() !== post.user.toString()) {
+      const newNotification = new Notification({
+        type: "comment",
+        from: req.user._id,
+        to: postOwner,
+      });
+      await newNotification.save();
+    }
+    const newComment = post.comments[post.comments.length - 1];
+    return res
+      .status(200)
+      .json({ message: "your comment was posted", newComment });
   } catch (error) {
     console.log("the error in commenting on post is", error.message || error);
     return res.status(500).json({ message: "internal server error" });
@@ -161,7 +180,7 @@ export const likeUnlikePost = async (req, res) => {
       await Post.findByIdAndUpdate(
         req.params.id,
         { $pull: { likes: userId } },
-        { new: true },
+        { returnDocument: "after" },
       );
 
       await User.findByIdAndUpdate(req.user._id, {
@@ -173,7 +192,7 @@ export const likeUnlikePost = async (req, res) => {
       await Post.findByIdAndUpdate(
         req.params.id,
         { $push: { likes: userId } },
-        { new: true },
+        { returnDocument: "after" },
       );
       if (post.user.toString() !== req.user._id.toString()) {
         const newNotification = new Notification({
@@ -216,27 +235,6 @@ export const getAllPosts = async (req, res) => {
   }
 };
 
-export const getMyLikedPost = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({ message: "user not found" });
-    }
-    const likedPosts = await Post.find({ _id: { $in: user.likedPosts } })
-      .populate({
-        path: "user",
-        select: "-password",
-      })
-      .populate({
-        path: "comments.user",
-        select: "-password",
-      });
-    return res.status(200).json(likedPosts);
-  } catch (error) {
-    console.log("the error in getting my liked posts was", error);
-    return res.status(500).json({ message: "internal server error" });
-  }
-};
 export const getUserLikedPost = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -303,30 +301,16 @@ export const getUserPosts = async (req, res) => {
         createdAt: -1,
       })
       .populate({
+        path: "user",
+        select: "-password",
+      })
+      .populate({
         path: "comments.user",
         select: "-password",
       });
     return res.status(200).json(myPosts);
   } catch (error) {
     console.log("the error in getting user posts was");
-    return res.status(500).json({ message: "internal server error" });
-  }
-};
-
-export const getMyPosts = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const myPosts = await Post.find({ user: userId })
-      .sort({
-        createdAt: -1,
-      })
-      .populate({
-        path: "user comments.user",
-        select: "-password",
-      });
-    return res.status(200).json(myPosts);
-  } catch (error) {
-    console.log("the error in getting my posts was");
     return res.status(500).json({ message: "internal server error" });
   }
 };

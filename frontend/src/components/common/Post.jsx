@@ -3,15 +3,16 @@ import { BiRepost } from "react-icons/bi";
 import { FaRegHeart } from "react-icons/fa";
 import { FaRegBookmark } from "react-icons/fa6";
 import { FaTrash } from "react-icons/fa";
-import { useState } from "react";
+import {  useState } from "react";
 import { Link } from "react-router-dom";
 import placeholderImg from "../../public/avatar-placeholder.png";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { likePost, deletePost } from "../../api/postApi.js";
+import { likePost, deletePost,commentOnPost } from "../../api/postApi.js";
 import { getMe } from "../../api/auth.js";
 import { FaHeart } from "react-icons/fa";
 import toast from "react-hot-toast";
 import LoadingSpinner from "./LoadingSpinner.jsx";
+import {formatTimeAgo} from "./DaysAgo.js"
 const Post = ({ post }) => {
   const { data: user } = useQuery({
     queryKey: ["me"],
@@ -23,46 +24,52 @@ const Post = ({ post }) => {
   const queryClient = useQueryClient();
   const me = user._id;
   const isMyPost = me === postOwner._id;
-  const formattedDate = "1h";
-  const isLiked = post.likes.includes(me) ? true : false;
-  const isCommenting = false;
-  const keys=[
-		"foryouposts",
-		"followingPosts",
-		"myposts",
-		"mylikedposts"
-	]
+  const isLiked = post.likes?.includes(me) ? true : false;
+  const keys = ["foryouposts", "followingPosts"];
+
+
+  const {mutate:commentFn,isPending:isCommenting}=useMutation({
+    mutationFn:()=>commentOnPost(post._id,comment),
+    onSuccess:(newComment)=>{
+        keys.forEach((key)=>{
+          queryClient.setQueryData([key],(oldData)=>{
+            if(!oldData) return
+            return oldData.map((cachedPost)=>{
+              if(cachedPost._id===post._id){
+                return {...cachedPost,comments:[...cachedPost.comments,newComment]}
+              }
+              return cachedPost;
+            })
+          })
+        })
+        queryClient.setQueriesData({queryKey:[""]})
+        setComment("")
+    }
+  })
   const handlePostComment = (e) => {
     e.preventDefault();
+    commentFn()
   };
   const { mutate: like } = useMutation({
     mutationFn: () => likePost(post._id),
-    onSuccess:()=>{
-      const currentPostId=post._id
-      keys.forEach((key)=>{
-        queryClient.setQueryData([key],(oldData)=>{
-          if(!oldData) return
-          return oldData.map((cachedPost)=>{
-            if(cachedPost._id===currentPostId){
-              return {
-                ...cachedPost,
-                likes:isLiked?cachedPost.likes.filter((id) => id !== user._id):[...cachedPost.likes,user._id]
-              }
-            }
-            return cachedPost;
-          })
-        })
-      })
-    },
     onError: (error) => {
       toast.error(error.message || "Failed to like post");
     },
   });
-  const { mutate: del,isPending } = useMutation({
-    mutationFn:async()=>{await deletePost(post._id)} ,
+  const { mutate: del, isPending } = useMutation({
+    mutationFn: async () => {
+      await deletePost(post._id);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["foryouposts"] });
-      queryClient.invalidateQueries({queryKey:["myposts"]})
+      const currentPostId = post._id;
+      keys.forEach((key) => {
+        queryClient.setQueryData([key], (oldData) => {
+          if (!oldData) return;
+          return oldData.filter(
+            (cachedPost) => cachedPost._id !== currentPostId,
+          );
+        });
+      });
     },
   });
   const handleDeletePost = () => {
@@ -70,6 +77,53 @@ const Post = ({ post }) => {
   };
   const handleLikePost = () => {
     like();
+    const currentPostId = post._id;
+    keys.forEach((key) => {
+      queryClient.setQueryData([key], (oldData) => {
+        if (!oldData) return;
+        return oldData.map((cachedPost) => {
+          if (cachedPost._id === currentPostId) {
+            return {
+              ...cachedPost,
+              likes: isLiked
+                ? cachedPost.likes.filter((id) => id !== user._id)
+                : [...cachedPost.likes, user._id],
+            };
+          }
+          return cachedPost;
+        });
+      });
+    });
+
+    queryClient.setQueriesData({ queryKey: ["userpost"] }, (oldData) => {
+      if (!oldData) return oldData;
+
+      return oldData.map((cachedPost) => {
+        if (cachedPost._id !== currentPostId) return cachedPost;
+
+        return {
+          ...cachedPost,
+          likes: isLiked
+            ? cachedPost.likes.filter((id) => id !== user._id)
+            : [...cachedPost.likes, user._id],
+        };
+      });
+    });
+
+    queryClient.setQueriesData({ queryKey: ["userLikedPosts"] }, (oldData) => {
+      if (!oldData) return oldData;
+
+      return oldData.map((cachedPost) => {
+        if (cachedPost._id !== currentPostId) return cachedPost;
+
+        return {
+          ...cachedPost,
+          likes: isLiked
+            ? cachedPost.likes.filter((id) => id !== user._id)
+            : [...cachedPost.likes, user._id],
+        };
+      });
+    });
   };
 
   return (
@@ -80,31 +134,32 @@ const Post = ({ post }) => {
             to={`/profile/${postOwner.username}`}
             className="w-8 rounded-full overflow-hidden"
           >
-            <img src={postOwner.profileImg || placeholderImg} />
+            <img src={postOwner.profileImg.url || placeholderImg} />
           </Link>
         </div>
         <div className="flex flex-col flex-1">
-          <div className="flex gap-2 items-center">
-            <Link to={`/profile/${postOwner.username}`} className="font-bold">
+          <div className="flex gap-0 flex-wrap sm:gap-2  items-center">
+            <Link to={`/profile/${postOwner.username}`}  className="font-bold text-[clamp(1rem,1vw,2rem)]">
               {postOwner.fullName}
             </Link>
             <span className="text-gray-700 flex gap-1 text-sm">
-              <Link to={`/profile/${postOwner.username}`}>
-                @{postOwner.username}
-              </Link>
               <span>·</span>
-              <span>{formattedDate}</span>
+              <span>{formatTimeAgo(post.createdAt)} ago</span>
             </span>
             {isMyPost && (
               <span className="flex justify-end flex-1">
-                {isPending?<LoadingSpinner/>:<FaTrash
-                  className="cursor-pointer hover:text-red-500"
-                  onClick={handleDeletePost}
-                />}
+                {isPending ? (
+                  <LoadingSpinner />
+                ) : (
+                  <FaTrash
+                    className="cursor-pointer hover:text-red-500"
+                    onClick={handleDeletePost}
+                  />
+                )}
               </span>
             )}
           </div>
-          <div className="flex flex-col gap-3 overflow-hidden">
+          <div className="flex flex-col gap-3 mt-2 overflow-hidden">
             <span>{post.text}</span>
             {post.img && (
               <img
@@ -142,28 +197,31 @@ const Post = ({ post }) => {
                         No comments yet! Be the first one 😉
                       </p>
                     )}
-                    {post.comments.map((comment) => (
+                    {[...post.comments].reverse().map((comment) => (
                       <div key={comment._id} className="flex gap-2 items-start">
+                        <Link to={`/profile/${comment.user.username}`}>
                         <div className="avatar">
                           <div className="w-8 rounded-full">
                             <img
                               src={
-                                comment.user.profileImg ||
-                                "/avatar-placeholder.png"
+                                comment.user.profileImg.url ||placeholderImg
+                                
                               }
                             />
                           </div>
                         </div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-1">
+                        </Link>
+                        <div className="flex mr-4 flex-col flex-1 min-w-0">
+                          <div className="flex flex-wrap  items-center gap-1">
+                            <Link to={`/profile/${comment.user.username}`}>
                             <span className="font-bold">
                               {comment.user.fullName}
                             </span>
-                            <span className="text-gray-700 text-sm">
-                              @{comment.user.username}
-                            </span>
+                            </Link>
+                            <span className="text-gray-500 text-2xl">·</span>
+                            <p className="text-gray-500 text-[0.9rem]">{formatTimeAgo(comment.createdAt)} ago</p>
                           </div>
-                          <div className="text-sm">{comment.text}</div>
+                          <div className="text-sm wrap-break-word">{comment.text}</div>
                         </div>
                       </div>
                     ))}
@@ -201,10 +259,14 @@ const Post = ({ post }) => {
                 className="flex gap-1 items-center group cursor-pointer"
                 onClick={handleLikePost}
               >
-                {isLiked?<FaHeart className="fill-pink-500" />:<FaRegHeart className="hover:text-pink-500 text-gray-500 "/>}
+                {isLiked ? (
+                  <FaHeart className="fill-pink-500" />
+                ) : (
+                  <FaRegHeart className="hover:text-pink-500 text-gray-500 " />
+                )}
 
                 <span
-                  className={`text-sm text-slate-500 group-hover:text-pink-500 ${
+                  className={`text-sm select-none text-slate-500 group-hover:text-pink-500 ${
                     isLiked ? "text-pink-500" : ""
                   }`}
                 >

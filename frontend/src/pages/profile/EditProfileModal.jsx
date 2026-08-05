@@ -1,5 +1,7 @@
-import { useState } from "react";
-
+import { useState,useRef} from "react";
+import { editUser } from "../../api/usersApi";
+import {useMutation,useQueryClient} from "@tanstack/react-query"
+import toast from "react-hot-toast"
 const EditProfileModal = () => {
 	const [formData, setFormData] = useState({
 		fullName: "",
@@ -10,10 +12,27 @@ const EditProfileModal = () => {
 		newPassword: "",
 		currentPassword: "",
 	});
+	const closebuttonRef = useRef(null)
+
+
+	const queryClient=useQueryClient();
+
+	const {mutate:edit,error,isError,isPending:isEditing}=useMutation({
+		mutationFn: editUser,
+		onSuccess:()=>{
+			queryClient.invalidateQueries({queryKey:["me"]});
+			queryClient.invalidateQueries({queryKey:["profile"]})
+			toast.success("profile updated successfully")
+			closebuttonRef.current.click();
+		}
+	})
 
 	const handleInputChange = (e) => {
 		setFormData({ ...formData, [e.target.name]: e.target.value });
 	};
+	const handleProfileEdit=()=>{
+		edit(formData)
+	}
 
 	return (
 		<>
@@ -21,16 +40,20 @@ const EditProfileModal = () => {
 				className='btn btn-outline rounded-full btn-sm'
 				onClick={() => document.getElementById("edit_profile_modal").showModal()}
 			>
-				Edit profile
+				Edit Info
 			</button>
 			<dialog id='edit_profile_modal' className='modal'>
-				<div className='modal-box border rounded-md border-gray-700 shadow-md'>
+				<div className='modal-box border flex flex-col items-center rounded-md border-gray-700 shadow-md'>
+					{isError && (
+						<p className="text-red-500 font-bold">{error?.message || "Unable to update profile"}!</p>
+					)}
 					<h3 className='font-bold text-lg my-3'>Update Profile</h3>
 					<form
 						className='flex flex-col gap-4'
 						onSubmit={(e) => {
 							e.preventDefault();
-							alert("Profile updated successfully");
+							
+							handleProfileEdit();
 						}}
 					>
 						<div className='flex flex-wrap gap-2'>
@@ -94,11 +117,11 @@ const EditProfileModal = () => {
 							name='link'
 							onChange={handleInputChange}
 						/>
-						<button className='btn btn-primary rounded-full btn-sm text-white'>Update</button>
+						<button disabled={isEditing} type='submit' className='btn btn-primary rounded-full btn-sm text-white'>{isEditing?"Updating...":"Update"}</button>
 					</form>
 				</div>
 				<form method='dialog' className='modal-backdrop'>
-					<button className='outline-none'>close</button>
+					<button ref={closebuttonRef} className='outline-none'>close</button>
 				</form>
 			</dialog>
 		</>

@@ -31,18 +31,23 @@ const CreatePost = () => {
           },
           body: JSON.stringify({ text, img }),
         });
+        const data=await res.json();
         if (!res.ok) {
-          return toast.error("failed posting!");
+          return toast.error(data.message);
         }
-        queryClient.invalidateQueries({ queryKey: ["foryouposts"] });
-        queryClient.invalidateQueries({ queryKey: ["myposts"] });
-        queryClient.invalidateQueries({ queryKey: ["mylikedposts"] });
+        return data;
       } catch (error) {
         console.log(error.message || error);
         toast.error(error.message || error || "internal server error");
         throw error;
       }
     },
+    onSuccess:(data)=>{
+      queryClient.setQueryData(["foryouposts"],(oldData)=>{
+        if(!oldData) return;
+        return [data.post,...oldData]
+      })
+    }
   });
 
   const handleSubmit = async (e) => {
@@ -67,7 +72,7 @@ const CreatePost = () => {
     <div className="flex p-4 items-start gap-4 border-b border-gray-700">
       <div className="avatar">
         <div className="w-8 rounded-full">
-          <img src={data.profileImg || placeholderImg} />
+          <img src={data.profileImg.url || placeholderImg} />
         </div>
       </div>
       <form className="flex flex-col gap-2 w-full" onSubmit={handleSubmit}>

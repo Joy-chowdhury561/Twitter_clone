@@ -39,12 +39,24 @@ const userSchema=new mongoose.Schema({
         }
     ],
     "profileImg":{
-        type:String,
-        default:""
+        url:{
+            type:String,
+            default:""
+        },
+        publicId:{
+            type:String,
+            default:""
+        }
     },
     "coverImg":{
-        type:String,
-        default:""
+        url:{
+            type:String,
+            default:""
+        },
+        publicId:{
+            type:String,
+            default:""
+        }
     },
     "bio":{
         type:String,
@@ -52,7 +64,7 @@ const userSchema=new mongoose.Schema({
     },
     "link":{
         type:String,
-        defaultL:""
+        default:""
     },
 
     "likedPosts":[{

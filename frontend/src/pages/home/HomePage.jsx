@@ -28,7 +28,7 @@ const HomePage = () => {
 		<>
 			<div className='flex-[4_4_0] mr-auto border-r border-gray-700 min-h-screen'>
 
-				<div className='flex  w-full border-b bg-black/2 backdrop-blur-sm sticky top-0 border-gray-700'>
+				<div className='flex z-3  w-full border-b bg-black/2 backdrop-blur-sm sticky top-0 border-gray-700'>
 					<div
 						className={
 							"flex justify-center items-center select-none  h-18 font-bold  flex-1 p-3 hover:bg-secondary transition duration-300 cursor-pointer relative"

@@ -1,7 +1,5 @@
 export async function getMe() {
-  const res = await fetch("/api/auth/getme", {
-    credentials: "include",
-  });
+  const res = await fetch("/api/auth/getme");
 
   if (!res.ok) {
     throw new Error("Unauthorized");

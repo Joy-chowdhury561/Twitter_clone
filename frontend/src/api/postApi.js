@@ -11,9 +11,9 @@ const getPosts = async () => {
     throw error;
   }
 };
-const MyLikedPosts = async () => {
+const userLikedPost = async (id) => {
   try {
-    const res = await fetch("/api/post/myLikedPosts");
+    const res = await fetch(`/api/post/userLikedPosts/${id}`);
     if (!res.ok) {
       throw new Error("failed fetching liked posts");
     }
@@ -24,9 +24,9 @@ const MyLikedPosts = async () => {
     throw error;
   }
 };
-const getMyPosts = async () => {
+const getUserPosts = async (username) => {
   try {
-    const res = await fetch("/api/post/getMyPosts");
+    const res = await fetch(`/api/post/getUserPosts/${username}`);
     if (!res.ok) {
       throw new Error("failed to fetch your post");
     }
@@ -84,11 +84,32 @@ const getFollowingPosts = async () => {
     throw error;
   }
 };
+const commentOnPost=async(postId,text)=>{
+  try {
+    const res=await fetch(`/api/post/comment/${postId}`,{
+      method:"POST",
+      headers:{
+        "content-type":"application/json"
+      },
+      body:JSON.stringify({text})
+    });
+    const data=await res.json();
+    if(!res.ok){
+    throw new Error("the error in commenting on this post was",data.message)
+    }
+    return data.newComment;
+
+  } catch (error) {
+    console.log("the error in commenting on post was",error.message);
+    throw error
+  }
+}
 export {
-  getMyPosts,
-  MyLikedPosts,
+  getUserPosts,
+  userLikedPost,
   getPosts,
   likePost,
   deletePost,
   getFollowingPosts,
+  commentOnPost
 };
