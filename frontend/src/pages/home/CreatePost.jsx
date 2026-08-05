@@ -108,7 +108,7 @@ const CreatePost = () => {
           </div>
           <input
             type="file"
-            accept="image/"
+            accept="image/*"
             hidden
             ref={imgRef}
             onChange={handleImgChange}
