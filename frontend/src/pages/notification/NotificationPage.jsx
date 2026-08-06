@@ -72,7 +72,7 @@ const NotificationPage = () => {
               <Link to={`/profile/${notification.from.username}`}>
                 <div className="avatar">
                   <div className="w-8 rounded-full">
-                    <img src={notification.from.profileImg || placeholderPFP} />
+                    <img src={notification.from.profileImg.url || placeholderPFP} />
                   </div>
                 </div>
                 <div className="flex gap-1">
