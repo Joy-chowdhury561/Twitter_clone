@@ -46,6 +46,5 @@ app.listen(PORT, () => {
   connectDB();
   if(process.env.NODE_ENV==="production"){
     job.start()
-    
   }
 });
